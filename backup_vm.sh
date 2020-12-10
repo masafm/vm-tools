@@ -6,7 +6,7 @@ if [ "$1" != "cron" ]; then
 fi
 
 SNAPSHOT_SIZE_THRESH=10737418240
-SNAPSHOT_MAX_NUM=7
+SNAPSHOT_MAX_NUM=14
 
 timestamp=$(date '+%Y%m%d%H%M%S')
 echo "Backup start at $(date '+%Y/%m/%d %H:%M:%S')"
@@ -17,7 +17,7 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
     for vm in $vms;do
 	echo "Start $vm"
 	disks=$(ssh $host virsh domblklist $vm | tail -n +3 | egrep '\.qcow2$|\.img$')
-	cmd="ssh $host virsh snapshot-create-as --name ${snapshot_name} --domain ${vm} --disk-only --atomic"
+	cmd="ssh $host virsh snapshot-create-as --name ${snapshot_name} --domain ${vm} --disk-only --atomic --no-metadata"
 	cmd_opt=""
 	snapshot_deleted=""
 	while read line;do
@@ -63,18 +63,15 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 	# take snapshot
 	if [ -n "$cmd_opt" ];then
 	    ${cmd}${cmd_opt}
+	    #ssh $host "rm -rf /var/lib/libvirt/qemu/snapshot/*"
+	    #ssh $host "systemctl restart libvirtd"
 	fi
     done
 done
 
-# reload vm config
-~/bin/allssh systemctl restart libvirtd
-
 # do rsync
 ops="-avz4 --delete --no-group --progress"
 rsync $ops /etc/libvirt/qemu/ rsync://mkashi@raspberrypi/backup/qemu/
-#rsync $ops /etc/libvirt/qemu/ rsync://rsync@mks-aspire/qemu/
 rsync $ops --exclude='*.tmp' --exclude="*.${timestamp}.*" /var/lib/libvirt/images/ rsync://mkashi@raspberrypi/backup/images/
-#rsync $ops --exclude='*.tmp' --exclude="*.${timestamp}.*" -e ssh /var/lib/libvirt/images/ mkashi@raspberrypi:/home/backup/images/
 
 echo "Backup end at $(date '+%Y/%m/%d %H:%M:%S')"
