@@ -63,8 +63,6 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 	# take snapshot
 	if [ -n "$cmd_opt" ];then
 	    ${cmd}${cmd_opt}
-	    #ssh $host "rm -rf /var/lib/libvirt/qemu/snapshot/*"
-	    #ssh $host "systemctl restart libvirtd"
 	fi
     done
 done
