@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 if [ "$1" != "cron" ]; then
     echo "Please run this command from cron" >&2
@@ -17,7 +17,7 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
     for vm in $vms;do
 	echo "Start $vm"
 	disks=$(ssh $host virsh domblklist $vm | tail -n +3 | egrep '\.qcow2$|\.img$')
-	cmd="ssh $host virsh snapshot-create-as --name ${snapshot_name} --domain ${vm} --disk-only --atomic --no-metadata"
+	cmd="ssh $host virsh snapshot-create-as --name ${snapshot_name} --domain ${vm} --disk-only --atomic --no-metadata --quiesce"
 	cmd_opt=""
 	snapshot_deleted=""
 	while read line;do
