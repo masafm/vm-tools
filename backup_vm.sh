@@ -18,29 +18,34 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 	echo "Start $vm"
 	disks=$(ssh $host virsh domblklist $vm | tail -n +3 | egrep '\.qcow2$|\.img|-snap$')
 	cmd="ssh $host virsh snapshot-create-as --name ${snapshot_name} --domain ${vm} --disk-only --atomic --no-metadata --quiesce"
-	while read line;do
-	    dev=$(echo "$line" | awk '{print $1}')
-	    path=$(echo "$line" | awk '{print $2}')
+	devs=$(echo "$disks" | awk '{print $1}')
+	for dev in $devs;do
+	    path=$(echo "$disks" | grep "$dev" | awk '{print $2}')
+	    echo "debug: $dev:$path"
 	    path_base=${path%.*}
 	    # delete old snapshots
 	    num_snaps=$(ls ${path_base}.* 2>/dev/null | wc -l)
-	    if [ $num_snaps -ge $SNAPSHOT_MAX_NUM ];then
-		snaps=($(ls ${path_base}.*.* 2>/dev/null))
+	    while [ $num_snaps -ge $SNAPSHOT_MAX_NUM ];do
+		snaps=($(ls ${path_base}.* 2>/dev/null))
 		for ((i=0; i<$num_snaps-1; i++));do
 		    fsize=$(wc --bytes "${snaps[$i]}" | awk '{print $1}')
 		    if [ $fsize -lt $SNAPSHOT_SIZE_THRESH ];then
 			base=${snaps[$i]}
 			top=${snaps[(($i+1))]}
-			ssh $host virsh blockcommit $vm $dev --base $base --top $top --verbose --wait --delete 2>&1
+			cmd2="ssh $host virsh blockcommit $vm $dev --base $base --top $top --verbose --wait --delete 2>&1"
+			echo "debug: ${cmd2}"
+			${cmd2}
 			break
 		    fi
 		done
 		if [ $i -eq $(($num_snaps-1)) ];then
 		    echo "$vm no snapshot was taken for $dev" 1>&2
 		fi
-	    fi
-	done < <(echo "$disks")
+		num_snaps=$(ls ${path_base}.* 2>/dev/null | wc -l)
+	    done
+	done
 	# take snapshot
+	echo "debug: ${cmd}"
 	${cmd}
     done
 done
