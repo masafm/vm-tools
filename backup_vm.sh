@@ -1,12 +1,32 @@
 #!/bin/bash
 
+SNAPSHOT_MAX_NUM=14
+SNAPSHOT_MAX_GB_THRESH=$((10*1024*1024*1024))
+
 if [ "$1" != "cron" ]; then
     echo "Please run this command from cron" >&2
     exit 9
 fi
 
-SNAPSHOT_SIZE_THRESH=10737418240
-SNAPSHOT_MAX_NUM=14
+if [ -n "$2" ];then
+    if [[ "$2" =~ ^[0-9]+$ ]] && [ "$2" -ge 1 ];then
+	SNAPSHOT_MAX_NUM=$2
+    else
+	echo "Invalid SNAPSHOT_MAX_NUM"
+	echo "Usage: $0 cron [SNAPSHOT_MAX_NUM] [SNAPSHOT_MAX_GB_THRESH]" >&2
+	exit 9
+    fi
+fi
+
+if [ -n "$3" ];then
+    if [[ "$3" =~ ^[0-9]+$ ]] && [ "$3" -ge 1 ];then
+	SNAPSHOT_MAX_GB_THRESH=$(($3*1024*1024*1024))
+    else
+	echo "Invalid SNAPSHOT_MAX_GB_THRESH"
+	echo "Usage: $0 cron [SNAPSHOT_MAX_NUM] [SNAPSHOT_MAX_GB_THRESH]" >&2
+	exit 9
+    fi
+fi
 
 timestamp=$(date '+%Y%m%d%H%M%S')
 snapshot_name=${timestamp}-snap
@@ -29,7 +49,7 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 		snaps=($(ls ${path_base}.* 2>/dev/null))
 		for ((i=0; i<$num_snaps-1; i++));do
 		    fsize=$(wc --bytes "${snaps[$i]}" | awk '{print $1}')
-		    if [ $fsize -lt $SNAPSHOT_SIZE_THRESH ];then
+		    if [ $fsize -lt $SNAPSHOT_MAX_GB_THRESH ];then
 			base=${snaps[$i]}
 			top=${snaps[(($i+1))]}
 			cmd2="ssh $host virsh blockcommit $vm $dev --base $base --top $top --verbose --wait --delete 2>&1"
@@ -38,8 +58,11 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 			break
 		    fi
 		done
-		if [ $i -eq $(($num_snaps-1)) ];then
-		    echo "$vm no snapshot was taken for $dev" 1>&2
+		if [ $i = $(($num_snaps-1)) ];then
+		    top=${snaps[0]}
+		    cmd2="ssh $host virsh blockcommit $vm $dev --top $top --verbose --wait --delete 2>&1"
+		    echo "debug: ${cmd2}"
+		    ${cmd2}
 		fi
 		num_snaps=$(ls ${path_base}.* 2>/dev/null | wc -l)
 	    done
