@@ -47,12 +47,13 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 	    num_snaps=$(ls ${path_base}.* 2>/dev/null | wc -l)
 	    while [ $num_snaps -ge $SNAPSHOT_MAX_NUM ];do
 		snaps=($(ls ${path_base}.* 2>/dev/null))
+		cmd2_opt="--verbose --wait --delete"
 		for ((i=0; i<$num_snaps-1; i++));do
 		    fsize=$(wc --bytes "${snaps[$i]}" | awk '{print $1}')
 		    if [ $fsize -lt $SNAPSHOT_MAX_GB_THRESH ];then
 			base=${snaps[$i]}
 			top=${snaps[(($i+1))]}
-			cmd2="ssh $host virsh blockcommit $vm $dev --base $base --top $top --verbose --wait --delete 2>&1"
+			cmd2="ssh $host virsh blockcommit $vm $dev --base $base --top $top ${cmd2_opt} 2>&1"
 			echo "debug: ${cmd2}"
 			${cmd2}
 			break
@@ -60,7 +61,7 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 		done
 		if [ $i = $(($num_snaps-1)) ];then
 		    top=${snaps[0]}
-		    cmd2="ssh $host virsh blockcommit $vm $dev --top $top --verbose --wait --delete 2>&1"
+		    cmd2="ssh $host virsh blockcommit $vm $dev --top $top ${cmd2_opt} 2>&1"
 		    echo "debug: ${cmd2}"
 		    ${cmd2}
 		fi
@@ -70,6 +71,10 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 	# take snapshot
 	echo "debug: ${cmd}"
 	${cmd}
+	for latest in /var/lib/libvirt/images/*.${snapshot_name};do
+	    symlink=$(echo $latest | sed -e "s/${snapshot_name}/latest/")
+	    ln -sf "$latest" "$symlink"
+	done
     done
 done
 
