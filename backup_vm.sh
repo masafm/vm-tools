@@ -71,10 +71,6 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
 	# take snapshot
 	echo "debug: ${cmd}"
 	${cmd}
-	for latest in /var/lib/libvirt/images/*.${snapshot_name};do
-	    symlink=$(echo $latest | sed -e "s/${snapshot_name}/latest/")
-	    ln -sf "$latest" "$symlink"
-	done
     done
 done
 
