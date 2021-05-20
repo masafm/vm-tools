@@ -4,5 +4,5 @@ if [ -z "$*" ];then
     echo "No command specified"
     exit 1
 fi
-hosts=$(echo "mks-m75q-1 mks-m75q-2 mks-m75q-3" | sed -e "s/$(hostname -s)//")
+hosts=$(echo "m75s-1-host m75s-2-host m75s-3-host" | sed -e "s/$(hostname -s)//")
 for h in $hosts $(hostname -s);do echo "=== root@$h ===";ssh root@$h $@;done
