@@ -31,7 +31,7 @@ fi
 timestamp=$(date '+%Y%m%d%H%M%S')
 snapshot_name=${timestamp}-snap
 echo "Backup start at $(date '+%Y/%m/%d %H:%M:%S')"
-for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
+for host in m75s-1-host m75s-2-host m75s-3-host;do
     vms=$(ssh $host virsh list --name | grep -v template)
     
     for vm in $vms;do
@@ -74,12 +74,9 @@ for host in mks-m75q-1 mks-m75q-2 mks-m75q-3;do
     done
 done
 
-# reload libvirtd
-~/bin/allssh systemctl restart libvirtd
-
 # do rsync
 ops="-avz4 --delete --no-group --progress"
-rsync $ops /etc/libvirt/qemu/ rsync://mkashi@raspberrypi/backup/qemu/
-rsync $ops --exclude='*.tmp' --exclude="*.${snapshot_name}" /var/lib/libvirt/images/ rsync://mkashi@raspberrypi/backup/images/
+#rsync $ops /root/qemu/ rsync://mkashi@raspberrypi/backup/qemu/
+#rsync $ops --exclude='*.tmp' --exclude="*.${snapshot_name}" /var/lib/libvirt/images/ rsync://mkashi@raspberrypi/backup/images/
 
 echo "Backup end at $(date '+%Y/%m/%d %H:%M:%S')"

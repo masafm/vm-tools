@@ -1,0 +1,66 @@
+#!/bin/sh
+mount_points="/root/gluster /var/lib/libvirt/images /var/lib/libvirt/images2"
+
+if [ -z "$1" ];then
+    echo "Usage: cluster <command>"
+    exit 1
+fi
+
+if [ $1 = "start" ];then
+    
+    for point in $mount_points;do
+	while true;do
+	    logger "Mounting $point"
+	    result=$(mount $point 2>&1)
+	    if [ $? = 0 -o $? = 32 ];then
+		break
+	    else
+		logger "$result"
+	    fi
+	    sleep 5
+	done
+    done
+    systemctl start pacemaker.service
+    if [ -f /root/.unstandby ];then
+	while true;do
+	    sleep 5
+	    /usr/sbin/pcs node unstandby --wait >/dev/null 2>&1
+	    if [ $? = 0 ];then
+		rm /root/.unstandby
+		break
+	    fi
+	done
+    fi
+fi
+
+if [ $1 = "stop" ];then
+    /usr/sbin/pcs node standby --all
+    cp -f /root/bin/allssh /tmp/
+    for point in $mount_points;do
+	/tmp/allssh 'false;while [ $? != 0 -a $? != 32 ];do umount "'$point'";sleep 1;done'
+    done
+fi
+
+if [ $1 = "reboot" -o $1 = "poweroff" ];then
+    is_healing=$(for vol in $(gluster volume list);do gluster volume heal $vol info | grep "Number of entries:" | egrep -v "Number of entries: 0|Number of entries: -";done)
+    
+    if [ -n "$is_healing" ];then
+	echo "GlusterFS healing"
+    else
+	echo "GlustgerFS not healing"
+	pcs node standby --wait
+	if [ $? = 0 ];then
+	    touch /root/.unstandby
+	    systemctl stop glusterd.service
+	    killall glusterfsd
+	    if [ $1 = "reboot" ];then
+		shutdown -r now
+	    fi
+	    if [ $1 = "poweroff" ];then
+		shutdown -h now
+	    fi
+	else
+	    echo "Putting into standby mode failed"
+	fi
+    fi
+fi
