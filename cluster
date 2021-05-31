@@ -8,7 +8,7 @@ usage() {
     echo "COMMAND:"
     echo "    status: Show filesystem and pacemaker status"
     echo "    start: Mount filesystem and start pacemaker"
-    echo "    stop: Standby and unmount filesystem"
+    echo "    stop: Standby all nodes and unmount filesystem"
     echo "    unstandby: Unstandby all nodes"
     echo "    reboot: Reboot a node"
     echo "    poweroff: Poweroff a node"
