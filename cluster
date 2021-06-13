@@ -10,8 +10,8 @@ usage() {
     echo "    start: Mount filesystem and start pacemaker"
     echo "    stop: Standby all nodes and unmount filesystem"
     echo "    unstandby: Unstandby all nodes"
-    echo "    reboot: Reboot a node"
-    echo "    poweroff: Poweroff a node"
+    echo "    reboot: Safely reboot a node"
+    echo "    poweroff: Safely poweroff a node"
     echo ""
 }
 
@@ -21,7 +21,6 @@ if [ -z "$1" ];then
 fi
 
 if [ $1 = "start" ];then
-    
     for point in $mount_points;do
 	while true;do
 	    logger "Mounting $point"
@@ -46,15 +45,17 @@ if [ $1 = "start" ];then
 	done
     fi
 elif [ $1 = "stop" ];then
+    allssh cp -f /root/bin/allssh /usr/local/bin/ >/dev/null
+    allssh cp -f /root/bin/cluster /usr/local/bin/ >/dev/null
     /usr/sbin/pcs node standby --all
-    allssh cp -f /root/bin/allssh /tmp/
-    allssh cp -f /root/bin/cluster /tmp/
     for point in $mount_points;do
-	/tmp/allssh 'false;while [ $? != 0 -a $? != 32 ];do umount "'$point'";sleep 1;done;echo "'$point' unmounted"' &
+	/usr/local/bin/allssh 'false;while [ $? != 0 -a $? != 32 ];do umount "'$point'";sleep 1;done;echo "'$point' unmounted"' &
     done
 elif [ $1 = "unstandby" ];then
     /usr/sbin/pcs node unstandby --all
 elif [ $1 = "reboot" -o $1 = "poweroff" ];then
+    cp -f /root/bin/allssh /usr/local/bin/
+    cp -f /root/bin/cluster /usr/local/bin/
     is_healing=$(for vol in $(gluster volume list);do gluster volume heal $vol info | grep "Number of entries:" | egrep -v "Number of entries: 0|Number of entries: -";done)
     
     if [ -n "$is_healing" ];then
