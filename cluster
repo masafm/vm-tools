@@ -56,13 +56,13 @@ elif [ $1 = "unstandby" ];then
 elif [ $1 = "reboot" -o $1 = "poweroff" ];then
     cp -f /root/bin/allssh /usr/local/bin/
     cp -f /root/bin/cluster /usr/local/bin/
-    is_healing=$(for vol in $(gluster volume list);do gluster volume heal $vol info | grep "Number of entries:" | egrep -v "Number of entries: 0|Number of entries: -";done)
+    is_healing=$(for vol in $(/usr/sbin/gluster volume list);do /usr/sbin/gluster volume heal $vol info | grep "Number of entries:" | egrep -v "Number of entries: 0|Number of entries: -";done)
     
     if [ -n "$is_healing" ];then
 	echo "GlusterFS: Healing"
     else
 	echo "GlusterFS: OK"
-	pcs node standby --wait
+	/usr/sbin/pcs node standby --wait
 	if [ $? = 0 ];then
 	    touch /root/.unstandby
 	    systemctl stop glusterd.service
@@ -78,9 +78,9 @@ elif [ $1 = "reboot" -o $1 = "poweroff" ];then
 	fi
     fi
 elif [ $1 = "status" ];then
-    pcs status
+    /usr/sbin/pcs status
     echo ""
-    is_healing=$(for vol in $(gluster volume list);do gluster volume heal $vol info | grep "Number of entries:" | egrep -v "Number of entries: 0|Number of entries: -";done)
+    is_healing=$(for vol in $(/usr/sbin/gluster volume list);do /usr/sbin/gluster volume heal $vol info | grep "Number of entries:" | egrep -v "Number of entries: 0|Number of entries: -";done)
     if [ -n "$is_healing" ];then
 	echo "GlusterFS: Healing"
     else
