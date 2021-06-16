@@ -1,7 +1,6 @@
 #!/bin/sh
 mount_points="/root/gluster /var/lib/libvirt/images /var/lib/libvirt/images2"
 
-
 usage() {
     echo "Usage: cluster COMMAND"
     echo ""
